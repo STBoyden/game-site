@@ -1,3 +1,10 @@
-@import 'tailwindcss';
-@plugin '@tailwindcss/forms';
-@plugin '@tailwindcss/typography';
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+@import "tw-animate-css";
+
+@plugin "daisyui" {
+	themes:
+		all,
+		light --default,
+		dark --prefersdark;
+}

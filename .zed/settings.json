@@ -1,0 +1,14 @@
+{
+	"prettier": {
+		"allowed": true
+	},
+	"project_name": "Game Site",
+	"languages": {
+		"CSS": {
+			"language_servers": ["tailwindcss"]
+		}
+	},
+	"file_types": {
+		"JSONC": [".prettierrc"]
+	}
+}
