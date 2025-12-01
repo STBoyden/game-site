@@ -5,10 +5,12 @@
 	import favicon from "$lib/assets/favicon.svg";
 	import { ModeWatcher } from "mode-watcher";
 	import Navbar from "$lib/components/Navbar.svelte";
-
-	setupConvex(PUBLIC_CONVEX_URL);
+	import { setGameStoreContext } from "$lib/client/GameStore.svelte";
 
 	let { children } = $props();
+
+	setupConvex(PUBLIC_CONVEX_URL);
+	setGameStoreContext();
 </script>
 
 <svelte:head>
@@ -18,6 +20,6 @@
 
 <ModeWatcher />
 <Navbar />
-<div class="prose p-4">
+<div>
 	{@render children()}
 </div>
