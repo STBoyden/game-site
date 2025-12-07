@@ -122,33 +122,76 @@ export const addGame = action({
 	args: { name: v.string() },
 	handler: async (ctx, args): Promise<Id<"games"> | null> =>
 		Effect.runPromise(
-			Effect.orElseSucceed(
-				Effect.gen(function* () {
-					const sortName = yield* generateSortName(args.name);
-
-					const existing = yield* Effect.promise(() =>
-						ctx.runQuery(api.games.getBySortName, { sortName })
-					);
-					if (existing) {
-						return yield* Effect.fail(new GameExistsError({ withSortName: sortName }));
-					}
-
-					const gameInformation = yield* getGameInformation(ctx, args.name);
-					if (!gameInformation) {
-						return yield* Effect.fail(new NoGameInformation({ byName: args.name }));
-					}
-
-					const id: Id<"games"> = yield* Effect.tryPromise(() =>
-						ctx.runMutation(internal.games.addGameMutation, {
-							name: args.name,
-							sortName,
-							gameInformation
-						})
-					);
-
-					return id;
-				}),
-				() => null
+			pipe(
+				generateSortName(args.name),
+				Effect.andThen((sortName) =>
+					Effect.zip(
+						Effect.promise(() => ctx.runQuery(api.games.getBySortName, { sortName })),
+						Effect.succeed(sortName)
+					)
+				),
+				Effect.andThen(([existing, sortName]) =>
+					Effect.if(existing !== null, {
+						onTrue: () => Effect.fail(new GameExistsError({ withSortName: sortName })),
+						onFalse: () => Effect.succeed(sortName)
+					})
+				),
+				Effect.andThen((sortName) =>
+					Effect.zip(getGameInformation(ctx, args.name), Effect.succeed(sortName))
+				),
+				Effect.andThen(([gameInformation, sortName]) =>
+					Effect.if(gameInformation === null, {
+						onTrue: () => Effect.fail(new NoGameInformation({ byName: args.name })),
+						onFalse: () => Effect.succeed(gameInformation!)
+					})
+				),
+				Effect.andThen((gameInformation) =>
+					pipe(
+						generateSortName(gameInformation.data.name),
+						Effect.andThen((sortName) =>
+							Effect.tryPromise(() =>
+								ctx.runMutation(internal.games.addGameMutation, {
+									name: gameInformation.data.name,
+									sortName,
+									gameInformation
+								})
+							)
+						)
+					)
+				),
+				Effect.catchAll((error) =>
+					Effect.logWarning(`Could not add game to database: ${error}`).pipe(Effect.as(null))
+				)
 			)
 		)
+	// Effect.runPromise(
+	// 	Effect.orElseSucceed(
+	// 		Effect.gen(function* () {
+	// 			const sortName = yield* generateSortName(args.name);
+
+	// 			const existing = yield* Effect.promise(() =>
+	// 				ctx.runQuery(api.games.getBySortName, { sortName })
+	// 			);
+	// 			if (existing) {
+	// 				return yield* Effect.fail(new GameExistsError({ withSortName: sortName }));
+	// 			}
+
+	// 			const gameInformation = yield* getGameInformation(ctx, args.name);
+	// 			if (!gameInformation) {
+	// 				return yield* Effect.fail(new NoGameInformation({ byName: args.name }));
+	// 			}
+
+	// 			const id: Id<"games"> = yield* Effect.tryPromise(() =>
+	// 				ctx.runMutation(internal.games.addGameMutation, {
+	// 					name: args.name,
+	// 					sortName,
+	// 					gameInformation
+	// 				})
+	// 			);
+
+	// 			return id;
+	// 		}),
+	// 		() => null
+	// 	)
+	// )
 });

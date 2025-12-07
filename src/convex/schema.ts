@@ -11,8 +11,11 @@ export default defineSchema({
 		hero: cv.id("_storage")
 	})
 		.index("by_sortname", ["sortName"])
-		.index("by_releasedate", ["releaseDate"]),
-
+		.index("by_releasedate", ["releaseDate"])
+		.searchIndex("search_title", {
+			searchField: "name",
+			staged: false
+		}),
 	user: defineTable({
 		name: cv.string(),
 		games: cv.array(

@@ -71,8 +71,9 @@
 		{:else}
 			{#each gamesStore.games as game (game._id)}
 				<a
-					href={resolve(`/game-overview/${game.sortName}`)}
 					class="carousel-item max-w-xs rounded-box bg-base-300 pb-2 cursor-pointer"
+					data-sveltekit-preload-data
+					href={resolve(`/game-overview/${game.sortName}`)}
 				>
 					{@render gameCard(game)}
 				</a>

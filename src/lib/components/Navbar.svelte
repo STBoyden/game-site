@@ -1,16 +1,84 @@
-<script>
+<script lang="ts">
+	import { resolve } from "$app/paths";
+	import { useConvexClient } from "convex-svelte";
 	import ModeSwitcher from "./ModeSwitcher.svelte";
+	import { api } from "../../convex/_generated/api";
+	import { onClickOutside, useThrottle } from "runed";
+
+	let searchElement = $state<HTMLElement>();
+	let searchQuery = $state("");
+	let throttledSearchQuery = $state("");
+	let throttleDurationMS = $state(1000);
+
+	const convexClient = useConvexClient();
+
+	const searchResults = $derived.by(() => {
+		if (throttledSearchQuery === "") {
+			return null;
+		}
+
+		console.log(`Searching for ${throttledSearchQuery}...`);
+
+		return convexClient.action(api.games.search, { query: throttledSearchQuery, limit: null });
+	});
+
+	const throttledUpdate = useThrottle(
+		() => (throttledSearchQuery = searchQuery),
+		() => throttleDurationMS
+	);
+
+	onClickOutside(
+		() => searchElement,
+		() => (searchQuery = "")
+	);
 </script>
 
 <div class="navbar bg-base-300 shadow-sm">
 	<div class="navbar-start">
-		<button class="btn btn-ghost text-xl">Game Site</button>
+		<a href={resolve("/")} class="btn btn-ghost text-xl">Game Site</a>
 	</div>
 	<div class="navbar-center w-lg">
-		<label class="input input-md w-full">
-			<span class="label">Search</span>
-			<input type="text" placeholder="Search for a game..." />
-		</label>
+		<details class="dropdown w-full" open={searchQuery !== ""} bind:this={searchElement}>
+			<summary class="input input-md w-full">
+				<span class="label">Search</span>
+				<input
+					type="text"
+					placeholder="Search for a game..."
+					bind:value={
+						() => searchQuery,
+						(v) => {
+							searchQuery = v;
+							throttledUpdate();
+						}
+					}
+				/>
+				<button
+					class="label hover:text-base-content cursor-pointer"
+					onclick={() => (searchQuery = "")}>Clear</button
+				>
+			</summary>
+
+			<ul class="menu dropdown-content bg-base-100 rounded-box z-1 w-lg p-2 shadow-sm">
+				<svelte:boundary>
+					{#each (await searchResults) ?? [] as result (result._id)}
+						<li>
+							<a
+								data-sveltekit-reload
+								data-sveltekit-preload-data
+								href={resolve(`/game-overview/${result.sortName}`)}
+								onclick={() => (searchQuery = "")}
+							>
+								<span>{result.name}</span>
+							</a>
+						</li>
+					{/each}
+
+					{#snippet pending()}
+						<li><span class="skeleton skeleton-text">Loading...</span></li>
+					{/snippet}
+				</svelte:boundary>
+			</ul>
+		</details>
 	</div>
 	<div class="navbar-end">
 		<ModeSwitcher />
