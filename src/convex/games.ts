@@ -1,5 +1,4 @@
 import { query, internalMutation, internalQuery } from "./functions";
-
 import type { Doc } from "./_generated/dataModel";
 import { api, internal } from "./_generated/api";
 import type { Merge, Simplify } from "type-fest";
@@ -7,6 +6,7 @@ import { action } from "./_generated/server";
 import { Effect, Fiber, pipe } from "effect";
 import { type SGDBGame } from "steamgriddb";
 import { v } from "convex/values";
+import { steamGridDB } from ".";
 
 export const getAll = query({
 	args: {},
@@ -17,6 +17,30 @@ export const getAll = query({
 			icon: await ctx.storage.getUrl(game.iconId),
 			grid: await ctx.storage.getUrl(game.gridId)
 		}))
+});
+
+export const getAllByIDs = query({
+	args: { ids: v.array(v.id("games")) },
+	handler: (ctx, args) =>
+		Effect.runPromise(
+			pipe(
+				Effect.promise(() => ctx.table("games").getMany(args.ids)),
+				Effect.andThen((results) =>
+					Effect.promise(() =>
+						Promise.all(
+							results
+								.filter((x) => x !== null)
+								.map(async (game) => ({
+									...game,
+									hero: await ctx.storage.getUrl(game.heroId),
+									icon: await ctx.storage.getUrl(game.iconId),
+									grid: await ctx.storage.getUrl(game.gridId)
+								}))
+						)
+					)
+				)
+			)
+		)
 });
 
 export const get = query({
@@ -102,14 +126,21 @@ export const search = action({
 								onTrue: () =>
 									pipe(
 										Effect.promise(() =>
-											ctx.runAction(api.games_node.addGame, { name: args.query })
+											steamGridDB
+												.searchGame(args.query)
+												.then((results) => results.map((game) => game.name))
 										),
-										Effect.andThen((gameID) =>
-											Effect.if(gameID !== null, {
+										Effect.andThen((names) =>
+											Effect.promise(() => ctx.runAction(api.games_node.addGames, { names }))
+										),
+										Effect.andThen((gameIDs) =>
+											Effect.if(gameIDs.length !== 0, {
 												onTrue: () =>
 													pipe(
-														Effect.promise(() => ctx.runQuery(api.games.get, { id: gameID! })),
-														Effect.map((game) => [game!])
+														Effect.promise(() =>
+															ctx.runQuery(api.games.getAllByIDs, { ids: gameIDs })
+														),
+														Effect.andThen((games) => Effect.succeed(games))
 													),
 												onFalse: () => Effect.succeed(null)
 											})

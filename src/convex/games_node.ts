@@ -204,3 +204,16 @@ export const addGame = action({
 	// 	)
 	// )
 });
+
+export const addGames = action({
+	args: v.object({ names: v.array(v.string()) }),
+	handler: (ctx, args): Promise<Id<"games">[]> =>
+		Effect.runPromise(
+			pipe(
+				Effect.forEach(args.names, (name) =>
+					Effect.promise(() => ctx.runAction(api.games_node.addGame, { name }))
+				),
+				Effect.andThen((games) => Effect.succeed(games.filter((game) => game !== null)))
+			)
+		)
+});

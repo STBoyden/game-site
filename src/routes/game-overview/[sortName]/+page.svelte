@@ -1,5 +1,5 @@
 <script lang="ts">
-	const { params, data } = $props();
+	const { data } = $props();
 	const game = data.game;
 </script>
 

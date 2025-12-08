@@ -1,35 +1,35 @@
 <script lang="ts">
 	import { resolve } from "$app/paths";
-	import { useConvexClient } from "convex-svelte";
 	import ModeSwitcher from "./ModeSwitcher.svelte";
+	import { Debounced, onClickOutside } from "runed";
+	import { useConvexClient } from "convex-svelte";
 	import { api } from "../../convex/_generated/api";
-	import { onClickOutside, useThrottle } from "runed";
 
 	let searchElement = $state<HTMLElement>();
 	let searchQuery = $state("");
-	let throttledSearchQuery = $state("");
-	let throttleDurationMS = $state(1000);
+	let debouncedSearchQuery = new Debounced(() => searchQuery, 500);
 
 	const convexClient = useConvexClient();
 
 	const searchResults = $derived.by(() => {
-		if (throttledSearchQuery === "") {
+		if (debouncedSearchQuery.pending) {
 			return null;
 		}
 
-		console.log(`Searching for ${throttledSearchQuery}...`);
+		console.log(`Searching for ${debouncedSearchQuery.current}...`);
 
-		return convexClient.action(api.games.search, { query: throttledSearchQuery, limit: null });
+		return convexClient.action(api.games.search, {
+			query: debouncedSearchQuery.current,
+			limit: null
+		});
 	});
-
-	const throttledUpdate = useThrottle(
-		() => (throttledSearchQuery = searchQuery),
-		() => throttleDurationMS
-	);
 
 	onClickOutside(
 		() => searchElement,
-		() => (searchQuery = "")
+		() => {
+			searchQuery = "";
+			debouncedSearchQuery.updateImmediately();
+		}
 	);
 </script>
 
@@ -41,20 +41,13 @@
 		<details class="dropdown w-full" open={searchQuery !== ""} bind:this={searchElement}>
 			<summary class="input input-md w-full">
 				<span class="label">Search</span>
-				<input
-					type="text"
-					placeholder="Search for a game..."
-					bind:value={
-						() => searchQuery,
-						(v) => {
-							searchQuery = v;
-							throttledUpdate();
-						}
-					}
-				/>
+				<input type="text" placeholder="Search for a game..." bind:value={searchQuery} />
 				<button
 					class="label hover:text-base-content cursor-pointer"
-					onclick={() => (searchQuery = "")}>Clear</button
+					onclick={() => {
+						searchQuery = "";
+						debouncedSearchQuery.updateImmediately();
+					}}>Clear</button
 				>
 			</summary>
 
