@@ -139,7 +139,7 @@ export const addGame = action({
 				Effect.andThen((sortName) =>
 					Effect.zip(getGameInformation(ctx, args.name), Effect.succeed(sortName))
 				),
-				Effect.andThen(([gameInformation, sortName]) =>
+				Effect.andThen(([gameInformation, _sortName]) =>
 					Effect.if(gameInformation === null, {
 						onTrue: () => Effect.fail(new NoGameInformation({ byName: args.name })),
 						onFalse: () => Effect.succeed(gameInformation!)
@@ -149,6 +149,13 @@ export const addGame = action({
 					pipe(
 						generateSortName(gameInformation.data.name),
 						Effect.andThen((sortName) =>
+							// Effect.tryPromise(() =>
+							// 	ctx.runMutation(internal.games.addGameMutation, {
+							// 		name: gameInformation.data.name,
+							// 		sortName,
+							// 		gameInformation
+							// 	})
+							// )
 							Effect.tryPromise(() =>
 								ctx.runMutation(internal.games.addGameMutation, {
 									name: gameInformation.data.name,
@@ -160,7 +167,9 @@ export const addGame = action({
 					)
 				),
 				Effect.catchAll((error) =>
-					Effect.logWarning(`Could not add game to database: ${error}`).pipe(Effect.as(null))
+					Effect.logWarning(`Could not add game to database: ${error.toString()}`).pipe(
+						Effect.as(null)
+					)
 				)
 			)
 		)

@@ -1,5 +1,3 @@
-// import type { ArrayValues, CamelCasedPropertiesDeep } from "type-fest";
-// import type { SteamFunctions } from "../../types";
 import type { CamelCasedPropertiesDeep } from "type-fest";
 import { objectToCamel } from "ts-case-convert";
 import { buildAPIString } from "../../utils";

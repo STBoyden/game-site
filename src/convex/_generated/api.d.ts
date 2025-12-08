@@ -8,9 +8,12 @@
  * @module
  */
 
+import type * as functions from "../functions.js";
 import type * as games from "../games.js";
 import type * as games_node from "../games_node.js";
 import type * as index from "../index.js";
+import type * as migrations from "../migrations.js";
+import type * as types from "../types.js";
 
 import type {
   ApiFromModules,
@@ -19,9 +22,12 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  functions: typeof functions;
   games: typeof games;
   games_node: typeof games_node;
   index: typeof index;
+  migrations: typeof migrations;
+  types: typeof types;
 }>;
 
 /**

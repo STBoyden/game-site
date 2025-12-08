@@ -1,48 +1,43 @@
-import { query, internalMutation, internalQuery, action } from "./_generated/server";
-import { stream } from "convex-helpers/server/stream";
+import { query, internalMutation, internalQuery } from "./functions";
+
 import type { Doc } from "./_generated/dataModel";
 import { api, internal } from "./_generated/api";
 import type { Merge, Simplify } from "type-fest";
+import { action } from "./_generated/server";
 import { Effect, Fiber, pipe } from "effect";
 import { type SGDBGame } from "steamgriddb";
 import { v } from "convex/values";
-import schema from "./schema";
 
 export const getAll = query({
 	args: {},
 	handler: (ctx) =>
-		stream(ctx.db, schema)
-			.query("games")
-			.map(async (game) => {
-				return {
-					...game,
-					hero: await ctx.storage.getUrl(game.hero),
-					icon: await ctx.storage.getUrl(game.icon),
-					grid: await ctx.storage.getUrl(game.grid)
-				};
-			})
-			.collect()
+		ctx.table("games").map(async (game) => ({
+			...game,
+			hero: await ctx.storage.getUrl(game.heroId),
+			icon: await ctx.storage.getUrl(game.iconId),
+			grid: await ctx.storage.getUrl(game.gridId)
+		}))
 });
 
 export const get = query({
 	args: v.object({ id: v.id("games") }),
 	handler: (ctx, { id }) =>
 		Effect.runPromise(
-			Effect.gen(function* () {
-				yield* Effect.logInfo(`Fetching game information for ID: ${id}`);
-				return yield* Effect.promise(async () => {
-					const game = await ctx.db.get(id);
-
-					if (game) {
-						return {
-							...game,
-							hero: await ctx.storage.getUrl(game.hero),
-							icon: await ctx.storage.getUrl(game.icon),
-							grid: await ctx.storage.getUrl(game.grid)
-						};
-					}
-				});
-			})
+			pipe(
+				Effect.promise(() => ctx.table("games").get(id)),
+				Effect.andThen((game) =>
+					Effect.if(game !== null, {
+						onTrue: () =>
+							Effect.promise(async () => ({
+								...game!,
+								hero: await ctx.storage.getUrl(game!.heroId),
+								icon: await ctx.storage.getUrl(game!.iconId),
+								grid: await ctx.storage.getUrl(game!.gridId)
+							})),
+						onFalse: () => Effect.succeed(null)
+					})
+				)
+			)
 		)
 });
 
@@ -50,24 +45,23 @@ export const getBySortName = query({
 	args: v.object({ sortName: v.string() }),
 	handler: async (ctx, { sortName }) =>
 		Effect.runPromise(
-			Effect.gen(function* () {
-				yield* Effect.logInfo(`Fetching game information for sort name: ${sortName}`);
-				return yield* Effect.promise(async () => {
-					const game = await ctx.db
-						.query("games")
-						.withIndex("by_sortname", (q) => q.eq("sortName", sortName))
-						.first();
-
-					if (game) {
-						return {
-							...game,
-							hero: await ctx.storage.getUrl(game.hero),
-							icon: await ctx.storage.getUrl(game.icon),
-							grid: await ctx.storage.getUrl(game.grid)
-						};
-					}
-				});
-			})
+			pipe(
+				Effect.promise(() =>
+					ctx.table("games", "sortName", (q) => q.eq("sortName", sortName)).first()
+				),
+				Effect.andThen((game) =>
+					Effect.if(game !== null, {
+						onTrue: () =>
+							Effect.promise(async () => ({
+								...game!,
+								hero: await ctx.storage.getUrl(game!.heroId),
+								icon: await ctx.storage.getUrl(game!.iconId),
+								grid: await ctx.storage.getUrl(game!.gridId)
+							})),
+						onFalse: () => Effect.succeed(null)
+					})
+				)
+			)
 		)
 });
 
@@ -76,9 +70,9 @@ export const searchByName = internalQuery({
 	handler: (ctx, args) =>
 		Effect.runPromise(
 			Effect.promise(() =>
-				ctx.db
-					.query("games")
-					.withSearchIndex("search_title", (q) => q.search("name", args.query))
+				ctx
+					.table("games")
+					.search("search_title", (q) => q.search("name", args.query))
 					.take(args.limit ?? 10)
 			)
 		)
@@ -127,9 +121,9 @@ export const search = action({
 											Effect.forEach(results, (game) =>
 												Effect.promise(async () => ({
 													...game,
-													grid: await ctx.storage.getUrl(game.grid),
-													icon: await ctx.storage.getUrl(game.icon),
-													hero: await ctx.storage.getUrl(game.hero)
+													grid: await ctx.storage.getUrl(game.gridId),
+													icon: await ctx.storage.getUrl(game.iconId),
+													hero: await ctx.storage.getUrl(game.heroId)
 												}))
 											)
 										)
@@ -153,19 +147,30 @@ export const addGameMutation = internalMutation({
 			heroID: v.id("_storage")
 		})
 	},
-	handler: async (ctx, { name, sortName, gameInformation }) => {
-		const { data: _data, gridID: grid, iconID: icon, heroID: hero } = gameInformation;
-		const data = _data as SGDBGame;
+	handler: async (ctx, { name, sortName, gameInformation }) =>
+		Effect.runPromise(
+			pipe(
+				Effect.succeed(() => {
+					const { data: _data, gridID: gridId, iconID: iconId, heroID: heroId } = gameInformation;
+					const data = _data as SGDBGame;
 
-		return ctx.db.insert("games", {
-			name,
-			sortName,
-			releaseDate: data.release_date,
-			grid,
-			icon,
-			hero
-		});
-	}
+					return { data, gridId, iconId, heroId };
+				}),
+				Effect.andThen((success) => success()),
+				Effect.andThen(({ data, gridId, iconId, heroId }) =>
+					Effect.promise(() =>
+						ctx.table("games").insert({
+							name,
+							sortName,
+							releaseDate: data.release_date,
+							gridId,
+							iconId,
+							heroId
+						})
+					)
+				)
+			)
+		)
 });
 
 export const fileBySha256 = internalQuery({

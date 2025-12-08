@@ -1,22 +1,22 @@
-import { defineSchema, defineTable } from "convex/server";
+import { defineEnt, defineEntFromTable, defineEntSchema, getEntDefinitions } from "convex-ents";
+import { migrationsTable } from "convex-helpers/server/migrations";
 import { v as cv } from "convex/values";
 
-export default defineSchema({
-	games: defineTable({
-		sortName: cv.string(),
+const schema = defineEntSchema({
+	migrations: defineEntFromTable(migrationsTable),
+	games: defineEnt({
 		name: cv.string(),
-		releaseDate: cv.number(),
-		grid: cv.id("_storage"),
-		icon: cv.id("_storage"),
-		hero: cv.id("_storage")
+		releaseDate: cv.number()
 	})
-		.index("by_sortname", ["sortName"])
+		.field("sortName", cv.string(), { unique: true })
+		.edge("grid", { to: "_storage", deletion: "hard" })
+		.edge("icon", { to: "_storage", deletion: "hard" })
+		.edge("hero", { to: "_storage", deletion: "hard" })
 		.index("by_releasedate", ["releaseDate"])
 		.searchIndex("search_title", {
-			searchField: "name",
-			staged: false
+			searchField: "name"
 		}),
-	user: defineTable({
+	users: defineEnt({
 		name: cv.string(),
 		games: cv.array(
 			cv.object({
@@ -31,3 +31,6 @@ export default defineSchema({
 		)
 	})
 });
+
+export default schema;
+export const entDefinitions = getEntDefinitions(schema);
