@@ -1,22 +1,24 @@
 import { query, internalMutation, internalQuery } from "./functions";
-import type { Doc } from "./_generated/dataModel";
 import { api, internal } from "./_generated/api";
-import type { Merge, Simplify } from "type-fest";
 import { action } from "./_generated/server";
 import { Effect, Fiber, pipe } from "effect";
-import { type SGDBGame } from "steamgriddb";
+import type { Id } from "$convex/dataModel";
+import type { Game } from "./types";
 import { v } from "convex/values";
 import { steamGridDB } from ".";
 
 export const getAll = query({
 	args: {},
 	handler: (ctx) =>
-		ctx.table("games").map(async (game) => ({
-			...game,
-			hero: await ctx.storage.getUrl(game.heroId),
-			icon: await ctx.storage.getUrl(game.iconId),
-			grid: await ctx.storage.getUrl(game.gridId)
-		}))
+		ctx.table("games").map(
+			async (game) =>
+				({
+					...game,
+					hero: game.heroID !== undefined ? await ctx.storage.getUrl(game.heroID) : null,
+					icon: game.iconID !== undefined ? await ctx.storage.getUrl(game.iconID) : null,
+					grid: game.gridID !== undefined ? await ctx.storage.getUrl(game.gridID) : null
+				}) as Game
+		)
 });
 
 export const getAllByIDs = query({
@@ -30,12 +32,17 @@ export const getAllByIDs = query({
 						Promise.all(
 							results
 								.filter((x) => x !== null)
-								.map(async (game) => ({
-									...game,
-									hero: await ctx.storage.getUrl(game.heroId),
-									icon: await ctx.storage.getUrl(game.iconId),
-									grid: await ctx.storage.getUrl(game.gridId)
-								}))
+								.map(
+									async (game) =>
+										({
+											...game,
+											hero:
+												game.heroID !== undefined ? await ctx.storage.getUrl(game.heroID) : null,
+											icon:
+												game.iconID !== undefined ? await ctx.storage.getUrl(game.iconID) : null,
+											grid: game.gridID !== undefined ? await ctx.storage.getUrl(game.gridID) : null
+										}) as Game
+								)
 						)
 					)
 				)
@@ -52,12 +59,15 @@ export const get = query({
 				Effect.andThen((game) =>
 					Effect.if(game !== null, {
 						onTrue: () =>
-							Effect.promise(async () => ({
-								...game!,
-								hero: await ctx.storage.getUrl(game!.heroId),
-								icon: await ctx.storage.getUrl(game!.iconId),
-								grid: await ctx.storage.getUrl(game!.gridId)
-							})),
+							Effect.promise(
+								async () =>
+									({
+										...game!,
+										hero: game?.heroID !== undefined ? await ctx.storage.getUrl(game.heroID) : null,
+										icon: game?.iconID !== undefined ? await ctx.storage.getUrl(game.iconID) : null,
+										grid: game?.gridID !== undefined ? await ctx.storage.getUrl(game.gridID) : null
+									}) as Game
+							),
 						onFalse: () => Effect.succeed(null)
 					})
 				)
@@ -76,12 +86,15 @@ export const getBySortName = query({
 				Effect.andThen((game) =>
 					Effect.if(game !== null, {
 						onTrue: () =>
-							Effect.promise(async () => ({
-								...game!,
-								hero: await ctx.storage.getUrl(game!.heroId),
-								icon: await ctx.storage.getUrl(game!.iconId),
-								grid: await ctx.storage.getUrl(game!.gridId)
-							})),
+							Effect.promise(
+								async () =>
+									({
+										...game!,
+										hero: game?.heroID !== undefined ? await ctx.storage.getUrl(game.heroID) : null,
+										icon: game?.iconID !== undefined ? await ctx.storage.getUrl(game.iconID) : null,
+										grid: game?.gridID !== undefined ? await ctx.storage.getUrl(game.gridID) : null
+									}) as Game
+							),
 						onFalse: () => Effect.succeed(null)
 					})
 				)
@@ -90,7 +103,7 @@ export const getBySortName = query({
 });
 
 export const searchByName = internalQuery({
-	args: { query: v.string(), limit: v.nullable(v.number()) },
+	args: v.object({ query: v.string(), limit: v.optional(v.number()) }),
 	handler: (ctx, args) =>
 		Effect.runPromise(
 			Effect.promise(() =>
@@ -103,16 +116,8 @@ export const searchByName = internalQuery({
 });
 
 export const search = action({
-	args: v.object({ query: v.string(), limit: v.nullable(v.number()) }),
-	handler: (
-		ctx,
-		args
-	): Promise<
-		| Simplify<
-				Merge<Doc<"games">, { grid: string | null; icon: string | null; hero: string | null }>
-		  >[]
-		| null
-	> =>
+	args: v.object({ query: v.string(), limit: v.optional(v.number()) }),
+	handler: (ctx, args): Promise<Game[] | null> =>
 		Effect.runPromise(
 			Effect.if(args.query !== "", {
 				onTrue: () =>
@@ -150,12 +155,24 @@ export const search = action({
 									Fiber.join(
 										Effect.runFork(
 											Effect.forEach(results, (game) =>
-												Effect.promise(async () => ({
-													...game,
-													grid: await ctx.storage.getUrl(game.gridId),
-													icon: await ctx.storage.getUrl(game.iconId),
-													hero: await ctx.storage.getUrl(game.heroId)
-												}))
+												Effect.promise(
+													async () =>
+														({
+															...game,
+															hero:
+																game?.heroID !== undefined
+																	? await ctx.storage.getUrl(game.heroID)
+																	: null,
+															icon:
+																game?.iconID !== undefined
+																	? await ctx.storage.getUrl(game.iconID)
+																	: null,
+															grid:
+																game?.gridID !== undefined
+																	? await ctx.storage.getUrl(game.gridID)
+																	: null
+														}) as Game
+												)
 											)
 										)
 									)
@@ -167,37 +184,55 @@ export const search = action({
 		)
 });
 
-export const addGameMutation = internalMutation({
+export const addGameArtwork = internalMutation({
+	args: v.object({
+		gameID: v.id("games"),
+		gridID: v.id("_storage"),
+		iconID: v.id("_storage"),
+		heroID: v.id("_storage")
+	}),
+	handler: (ctx, { gameID, gridID, iconID, heroID }) =>
+		Effect.runPromise(
+			pipe(
+				Effect.tryPromise(() => ctx.table("games").getX(gameID)),
+				Effect.andThen((game) => Effect.tryPromise(() => game.patch({ gridID, iconID, heroID }))),
+				Effect.catchAll((error) =>
+					Effect.logError(`Could not update game artwork for ID ${gameID}: ${error}`)
+				)
+			)
+		)
+});
+
+export const addGame = internalMutation({
 	args: {
 		name: v.string(),
 		sortName: v.string(),
-		gameInformation: v.object({
-			data: v.any(),
-			gridID: v.id("_storage"),
-			iconID: v.id("_storage"),
-			heroID: v.id("_storage")
-		})
+		releaseDate: v.number(),
+		steamGridGameID: v.number()
 	},
-	handler: async (ctx, { name, sortName, gameInformation }) =>
+	handler: async (ctx, { name, sortName, releaseDate, steamGridGameID }): Promise<Id<"games">> =>
 		Effect.runPromise(
 			pipe(
-				Effect.succeed(() => {
-					const { data: _data, gridID: gridId, iconID: iconId, heroID: heroId } = gameInformation;
-					const data = _data as SGDBGame;
-
-					return { data, gridId, iconId, heroId };
-				}),
-				Effect.andThen((success) => success()),
-				Effect.andThen(({ data, gridId, iconId, heroId }) =>
-					Effect.promise(() =>
-						ctx.table("games").insert({
-							name,
-							sortName,
-							releaseDate: data.release_date,
-							gridId,
-							iconId,
-							heroId
-						})
+				Effect.promise(() =>
+					ctx.table("games").insert({
+						name,
+						sortName,
+						releaseDate
+					})
+				),
+				Effect.tap((id) =>
+					pipe(
+						Effect.tryPromise(() =>
+							ctx.scheduler.runAfter(0, internal.games_node.getGameArtwork, {
+								steamGridDBID: steamGridGameID,
+								gameID: id
+							})
+						),
+						Effect.andThen((scheduledTask) =>
+							Effect.logInfo(
+								`Added scheduled task to fetch artwork for game "${name}" with ID ${scheduledTask}`
+							)
+						)
 					)
 				)
 			)

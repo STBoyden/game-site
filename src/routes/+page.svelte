@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { resolve } from "$app/paths";
-	import { getGameStoreContext } from "$lib/client/GameStore.svelte";
+	import { getGameStoreContext } from "$client/GameStore.svelte";
 	// import { ArrowLeft, ArrowRight } from "@lucide/svelte";
 	import { ScrollState } from "runed";
 
@@ -52,13 +52,6 @@
 	<div
 		bind:this={carouselElement}
 		class="carousel carousel-center w-full bg-base-200 p-2 space-x-2 border-base-300 border-2 rounded-box"
-		onwheel={(event) => {
-			if (event.deltaY > 0) {
-				carouselScroll.x += 320;
-			} else if (event.deltaY < 0) {
-				carouselScroll.x -= 320;
-			}
-		}}
 	>
 		{#if gamesStore.isLoading}
 			<span class="carousel-item"></span>

@@ -1,6 +1,6 @@
 import type { CamelCasedPropertiesDeep } from "type-fest";
+import { buildAPIString } from "$server/steam-api/utils";
 import { objectToCamel } from "ts-case-convert";
-import { buildAPIString } from "../../utils";
 import * as v from "valibot";
 
 export const GetAppListSchema = v.object({

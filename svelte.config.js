@@ -13,6 +13,12 @@ const config = {
 		adapter: adapter(),
 		experimental: {
 			remoteFunctions: true
+		},
+		alias: {
+			$server: "./src/lib/server",
+			"$server/*": "./src/lib/server/*",
+			"$client/*": "./src/lib/client/*",
+			"$convex/*": "./src/convex/_generated/*"
 		}
 	},
 	compilerOptions: {

@@ -9,9 +9,9 @@ const schema = defineEntSchema({
 		releaseDate: cv.number()
 	})
 		.field("sortName", cv.string(), { unique: true })
-		.edge("grid", { to: "_storage", deletion: "hard" })
-		.edge("icon", { to: "_storage", deletion: "hard" })
-		.edge("hero", { to: "_storage", deletion: "hard" })
+		.edge("grid", { field: "gridID", to: "_storage", deletion: "hard", optional: true })
+		.edge("icon", { field: "iconID", to: "_storage", deletion: "hard", optional: true })
+		.edge("hero", { field: "heroID", to: "_storage", deletion: "hard", optional: true })
 		.index("by_releasedate", ["releaseDate"])
 		.searchIndex("search_title", {
 			searchField: "name"

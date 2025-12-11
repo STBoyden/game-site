@@ -1,7 +1,7 @@
-import { api } from "../../convex/_generated/api";
 import { getContext, setContext } from "svelte";
 import { SvelteMap } from "svelte/reactivity";
 import { useQuery } from "convex-svelte";
+import { api } from "$convex/api";
 
 export class GameStore {
 	private gamesQuery = useQuery(api.games.getAll, {});

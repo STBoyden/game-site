@@ -1,9 +1,9 @@
 "use node";
 
+import { action, internalAction } from "./_generated/server";
 import type { DataModel, Id } from "./_generated/dataModel";
 import type { GenericActionCtx } from "convex/server";
 import { api, internal } from "./_generated/api";
-import { action } from "./_generated/server";
 import { Data, Effect, pipe } from "effect";
 import { v } from "convex/values";
 import * as crypto from "crypto";
@@ -52,7 +52,57 @@ const uploadToConvex = (ctx: GenericActionCtx<DataModel>, blob: Blob, sha256?: s
 		});
 	});
 
-export const getGameInformation = (ctx: GenericActionCtx<DataModel>, name: string) =>
+export const getGameArtwork = internalAction({
+	args: v.object({ steamGridDBID: v.number(), gameID: v.id("games") }),
+	handler: (ctx, { steamGridDBID: id, gameID }): Promise<boolean> =>
+		Effect.runPromise(
+			pipe(
+				Effect.tryPromise(async () =>
+					Promise.all([
+						await steamGridDB.getGridsById(id, [], [], ["image/png"], ["static"], "false", "false"),
+						await steamGridDB.getIconsById(id, [], [], ["image/png"], ["static"], "false", "false"),
+						await steamGridDB.getHeroesById(id, [], [], ["image/png"], ["static"], "false", "false")
+					])
+				),
+				Effect.andThen(([grids, icons, heroes]) =>
+					Effect.if(grids.length === 0 || icons.length === 0 || heroes.length === 0, {
+						onTrue: () => Effect.fail("Grids, icons, or heroes returned nothing "),
+						onFalse: () =>
+							pipe(
+								Effect.succeed([grids[0].url, icons[0].url, heroes[0].url]),
+								Effect.andThen(([gridURL, iconURL, heroURL]) =>
+									Effect.all([
+										downloadImage(gridURL),
+										downloadImage(iconURL),
+										downloadImage(heroURL)
+									])
+								),
+								Effect.andThen(([gridData, iconData, heroData]) =>
+									Effect.all([
+										uploadToConvex(ctx, gridData[0], gridData[1]),
+										uploadToConvex(ctx, iconData[0], iconData[1]),
+										uploadToConvex(ctx, heroData[0], heroData[1])
+									])
+								),
+								Effect.andThen(([gridID, iconID, heroID]) =>
+									Effect.tryPromise(() =>
+										ctx.runMutation(internal.games.addGameArtwork, {
+											gameID,
+											gridID,
+											iconID,
+											heroID
+										})
+									)
+								),
+								Effect.andThen((id) => (id ? Effect.succeed(true) : Effect.succeed(false)))
+							)
+					})
+				)
+			)
+		)
+});
+
+export const getGameInformation = (name: string) =>
 	Effect.gen(function* () {
 		const gameResults = yield* Effect.tryPromise(() => steamGridDB.searchGame(name));
 		if (gameResults.length === 0) {
@@ -94,17 +144,7 @@ export const getGameInformation = (ctx: GenericActionCtx<DataModel>, name: strin
 			return null;
 		}
 
-		const [gridID, iconID, heroID] = yield* pipe(
-			Effect.succeed([grids[0].url, icons[0].url, heroes[0].url]),
-			Effect.map((urls) => Effect.all(urls.map((url) => downloadImage(url)))),
-			Effect.flatten,
-			Effect.map((pairs) =>
-				Effect.all(pairs.map(([blob, sha256sum]) => uploadToConvex(ctx, blob, sha256sum)))
-			),
-			Effect.flatten
-		);
-
-		return { data: gameResults[0], gridID, iconID, heroID };
+		return { data: gameResults[0] };
 	});
 
 const generateSortName = (name: string) =>
@@ -137,30 +177,24 @@ export const addGame = action({
 					})
 				),
 				Effect.andThen((sortName) =>
-					Effect.zip(getGameInformation(ctx, args.name), Effect.succeed(sortName))
+					Effect.zip(getGameInformation(args.name), Effect.succeed(sortName))
 				),
 				Effect.andThen(([gameInformation, _sortName]) =>
 					Effect.if(gameInformation === null, {
 						onTrue: () => Effect.fail(new NoGameInformation({ byName: args.name })),
-						onFalse: () => Effect.succeed(gameInformation!)
+						onFalse: () => Effect.succeed(gameInformation!.data)
 					})
 				),
-				Effect.andThen((gameInformation) =>
+				Effect.andThen((sgdbGame) =>
 					pipe(
-						generateSortName(gameInformation.data.name),
+						generateSortName(sgdbGame.name),
 						Effect.andThen((sortName) =>
-							// Effect.tryPromise(() =>
-							// 	ctx.runMutation(internal.games.addGameMutation, {
-							// 		name: gameInformation.data.name,
-							// 		sortName,
-							// 		gameInformation
-							// 	})
-							// )
 							Effect.tryPromise(() =>
-								ctx.runMutation(internal.games.addGameMutation, {
-									name: gameInformation.data.name,
+								ctx.runMutation(internal.games.addGame, {
+									name: sgdbGame.name,
 									sortName,
-									gameInformation
+									releaseDate: sgdbGame.release_date,
+									steamGridGameID: sgdbGame.id
 								})
 							)
 						)

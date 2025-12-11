@@ -2,26 +2,35 @@
 	import { resolve } from "$app/paths";
 	import ModeSwitcher from "./ModeSwitcher.svelte";
 	import { Debounced, onClickOutside } from "runed";
-	import { useConvexClient } from "convex-svelte";
-	import { api } from "../../convex/_generated/api";
+	import { getMatchingGameNames, searchByName } from "$lib/functions/search.remote";
+	import type { Game } from "$lib/types";
 
 	let searchElement = $state<HTMLElement>();
 	let searchQuery = $state("");
+	let searchResults = $state<Game[]>([]);
 	let debouncedSearchQuery = new Debounced(() => searchQuery, 500);
 
-	const convexClient = useConvexClient();
+	// const convexClient = useConvexClient();
 
-	const searchResults = $derived.by(() => {
-		if (debouncedSearchQuery.pending) {
-			return null;
+	$effect(() => {
+		if (debouncedSearchQuery.pending || debouncedSearchQuery.current === "") {
+			return;
 		}
 
 		console.log(`Searching for ${debouncedSearchQuery.current}...`);
 
-		return convexClient.action(api.games.search, {
-			query: debouncedSearchQuery.current,
-			limit: null
+		getMatchingGameNames({ query: debouncedSearchQuery.current }).then((results) => {
+			for (const result in results) {
+				searchByName({ query: result }).then(
+					(games) => (searchResults = [...searchResults, ...games])
+				);
+			}
 		});
+
+		// return convexClient.action(api.games.search, {
+		// 	query: debouncedSearchQuery.current,
+		// 	limit: null
+		// });
 	});
 
 	onClickOutside(

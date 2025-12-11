@@ -5,7 +5,7 @@
 	import favicon from "$lib/assets/favicon.svg";
 	import { ModeWatcher } from "mode-watcher";
 	import Navbar from "$lib/components/Navbar.svelte";
-	import { setGameStoreContext } from "$lib/client/GameStore.svelte";
+	import { setGameStoreContext } from "$client/GameStore.svelte";
 
 	let { children } = $props();
 

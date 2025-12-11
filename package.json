@@ -57,6 +57,7 @@
 		"convex-svelte": "^0.0.12",
 		"mode-watcher": "^1.1.0",
 		"runed": "^0.37.0",
-		"type-fest": "^5.3.1"
+		"type-fest": "^5.3.1",
+		"valibot": "^1.2.0"
 	}
 }
