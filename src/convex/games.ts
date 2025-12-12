@@ -1,8 +1,8 @@
 import { query, internalMutation, internalQuery } from "./functions";
 import { api, internal } from "./_generated/api";
 import { action } from "./_generated/server";
-import { Effect, Fiber, pipe } from "effect";
 import type { Id } from "$convex/dataModel";
+import { Effect, pipe } from "effect";
 import type { Game } from "./types";
 import { v } from "convex/values";
 import { steamGridDB } from ".";
@@ -119,67 +119,57 @@ export const search = action({
 	args: v.object({ query: v.string(), limit: v.optional(v.number()) }),
 	handler: (ctx, args): Promise<Game[] | null> =>
 		Effect.runPromise(
-			Effect.if(args.query !== "", {
-				onTrue: () =>
-					pipe(
-						Effect.promise(() => ctx.runQuery(internal.games.searchByName, args)),
-						Effect.tap((results) =>
-							Effect.logInfo(`Searching by name ${args.query} yielded ${results.length} results`)
-						),
-						Effect.andThen((results) =>
-							Effect.if(results?.length === 0, {
-								onTrue: () =>
-									pipe(
-										Effect.promise(() =>
-											steamGridDB
-												.searchGame(args.query)
-												.then((results) => results.map((game) => game.name))
-										),
-										Effect.andThen((names) =>
-											Effect.promise(() => ctx.runAction(api.games_node.addGames, { names }))
-										),
-										Effect.andThen((gameIDs) =>
-											Effect.if(gameIDs.length !== 0, {
-												onTrue: () =>
-													pipe(
-														Effect.promise(() =>
-															ctx.runQuery(api.games.getAllByIDs, { ids: gameIDs })
-														),
-														Effect.andThen((games) => Effect.succeed(games))
-													),
-												onFalse: () => Effect.succeed(null)
-											})
-										)
-									),
-								onFalse: () =>
-									Fiber.join(
-										Effect.runFork(
-											Effect.forEach(results, (game) =>
-												Effect.promise(
-													async () =>
-														({
-															...game,
-															hero:
-																game?.heroID !== undefined
-																	? await ctx.storage.getUrl(game.heroID)
-																	: null,
-															icon:
-																game?.iconID !== undefined
-																	? await ctx.storage.getUrl(game.iconID)
-																	: null,
-															grid:
-																game?.gridID !== undefined
-																	? await ctx.storage.getUrl(game.gridID)
-																	: null
-														}) as Game
-												)
-											)
-										)
-									)
-							})
+			Effect.gen(function* () {
+				if (args.query === "") {
+					return yield* Effect.succeed(null);
+				}
+
+				const results = yield* Effect.tryPromise(() =>
+					ctx.runQuery(internal.games.searchByName, args)
+				);
+
+				yield* Effect.logInfo(
+					`Searching by name ${args.query} yielded ${results.length} existing results.`
+				);
+
+				const fork = Effect.fork(
+					Effect.gen(function* () {
+						const names = yield* Effect.tryPromise(() =>
+							steamGridDB.searchGame(args.query).then((x) => x.map((game) => game.name))
+						);
+
+						const ids = yield* Effect.tryPromise(() =>
+							ctx.runAction(api.games_node.addGames, { names })
+						);
+
+						return ids.length !== 0
+							? yield* Effect.tryPromise(() => ctx.runQuery(api.games.getAllByIDs, { ids }))
+							: null;
+					})
+				);
+
+				if (results?.length === 0) {
+					return yield* yield* fork;
+				} else {
+					const mapped = yield* Effect.forEach(results, (game) =>
+						Effect.promise(
+							async () =>
+								({
+									...game,
+									hero: game?.heroID !== undefined ? await ctx.storage.getUrl(game.heroID) : null,
+									icon: game?.iconID !== undefined ? await ctx.storage.getUrl(game.iconID) : null,
+									grid: game?.gridID !== undefined ? await ctx.storage.getUrl(game.gridID) : null
+								}) as Game
 						)
-					),
-				onFalse: () => Effect.succeed(null)
+					);
+
+					const extra = yield* yield* fork;
+					if (extra) {
+						return [...mapped, ...extra];
+					} else {
+						return mapped;
+					}
+				}
 			})
 		)
 });

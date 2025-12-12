@@ -14,7 +14,8 @@ const schema = defineEntSchema({
 		.edge("hero", { field: "heroID", to: "_storage", deletion: "hard", optional: true })
 		.index("by_releasedate", ["releaseDate"])
 		.searchIndex("search_title", {
-			searchField: "name"
+			searchField: "name",
+			filterFields: ["sortName"]
 		}),
 	users: defineEnt({
 		name: cv.string(),

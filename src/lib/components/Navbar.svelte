@@ -8,7 +8,9 @@
 	let searchElement = $state<HTMLElement>();
 	let searchQuery = $state("");
 	let searchResults = $state<Game[]>([]);
-	let debouncedSearchQuery = new Debounced(() => searchQuery, 500);
+	let resultsPending = $state(false);
+	let debouncedSearchQuery = new Debounced(() => searchQuery, 1000);
+	const RESULTS_LIMIT = 10;
 
 	// const convexClient = useConvexClient();
 
@@ -18,19 +20,33 @@
 		}
 
 		console.log(`Searching for ${debouncedSearchQuery.current}...`);
+		resultsPending = true;
 
-		getMatchingGameNames({ query: debouncedSearchQuery.current }).then((results) => {
-			for (const result in results) {
-				searchByName({ query: result }).then(
-					(games) => (searchResults = [...searchResults, ...games])
-				);
-			}
-		});
+		getMatchingGameNames({ query: debouncedSearchQuery.current, limit: RESULTS_LIMIT })
+			.then((results) => {
+				searchResults = [];
 
-		// return convexClient.action(api.games.search, {
-		// 	query: debouncedSearchQuery.current,
-		// 	limit: null
-		// });
+				if (results.length === 0) {
+					resultsPending = false;
+					return;
+				}
+
+				for (const result of results) {
+					searchByName({ query: result, limit: RESULTS_LIMIT })
+						.then((games) => {
+							searchResults = [
+								...searchResults,
+								...games.filter((x) => !searchResults.find((existing) => existing._id === x._id))
+							];
+
+							resultsPending = false;
+
+							console.log(`New games: ${games.map((x) => x.name).join(", ")}`);
+						})
+						.catch((reason) => `could not get any results for ${result}: ${reason}`);
+				}
+			})
+			.catch((reason) => console.log(`could not get matching game names: ${reason}`));
 	});
 
 	onClickOutside(
@@ -61,8 +77,10 @@
 			</summary>
 
 			<ul class="menu dropdown-content bg-base-100 rounded-box z-1 w-lg p-2 shadow-sm">
-				<svelte:boundary>
-					{#each (await searchResults) ?? [] as result (result._id)}
+				{#if resultsPending}
+					<li><span class="skeleton skeleton-text">Loading...</span></li>
+				{:else}
+					{#each searchResults ?? [] as result (result._id)}
 						<li>
 							<a
 								data-sveltekit-reload
@@ -73,12 +91,10 @@
 								<span>{result.name}</span>
 							</a>
 						</li>
+					{:else}
+						<li><span>Nothing found.</span></li>
 					{/each}
-
-					{#snippet pending()}
-						<li><span class="skeleton skeleton-text">Loading...</span></li>
-					{/snippet}
-				</svelte:boundary>
+				{/if}
 			</ul>
 		</details>
 	</div>

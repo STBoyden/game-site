@@ -3,6 +3,6 @@ import type { Doc } from "$convex/dataModel";
 
 // export type GameSections = Doc<"user">["games"][number]["playStateSection"];
 export type Game = Merge<
-	Except<Doc<"games">, "gridId" | "iconId" | "heroId">,
+	Except<Doc<"games">, "gridID" | "iconID" | "heroID">,
 	{ grid: string | null; icon: string | null; hero: string | null }
 >;
