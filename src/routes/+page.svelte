@@ -1,22 +1,10 @@
 <script lang="ts">
 	import { resolve } from "$app/paths";
 	import { getGameStoreContext } from "$client/GameStore.svelte";
-	// import { ArrowLeft, ArrowRight } from "@lucide/svelte";
-	import { ScrollState } from "runed";
-
-	type Game = Awaited<typeof gamesStore.games>[number];
+	import type { Game } from "$lib/types";
 
 	let carouselElement = $state<HTMLElement>();
 	const gamesStore = getGameStoreContext();
-	const carouselScroll = new ScrollState({ element: () => carouselElement });
-
-	// const scroll = (direction: "left" | "right") => {
-	// 	if (direction === "left") {
-	// 		carouselScroll.x -= 320;
-	// 	} else {
-	// 		carouselScroll.x += 320;
-	// 	}
-	// };
 </script>
 
 {#snippet gameCard(game: Game)}

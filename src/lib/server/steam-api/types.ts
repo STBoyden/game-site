@@ -1,4 +1,5 @@
-import { GetAppInfoSchema, GetAppListSchema, IStoreService } from "./interfaces/IStoreService";
+import type { getAppInfoSchema, getAppListSchema } from "./interfaces/IStoreService/schema";
+import type { IStoreService } from "./interfaces/IStoreService";
 
 export type SteamInterface =
 	| "IAccountCartService"
@@ -131,7 +132,18 @@ export type SteamInterface =
 
 export type SteamFunctions<I extends SteamInterface> = I extends "IStoreService"
 	? {
-			getAppList: (args: typeof GetAppListSchema) => ReturnType<IStoreService["getAppList"]>;
-			getAppInfo: (args: typeof GetAppInfoSchema) => ReturnType<IStoreService["getAppInfo"]>;
+			getAppList: (
+				args: typeof getAppListSchema.Encoded
+			) => ReturnType<IStoreService["getAppList"]>;
+			getAppListEffect: (
+				args: typeof getAppListSchema.Encoded
+			) => ReturnType<IStoreService["getAppListEffect"]>;
+
+			getAppInfo: (
+				args: typeof getAppInfoSchema.Encoded
+			) => ReturnType<IStoreService["getAppInfo"]>;
+			getAppInfoEffect: (
+				args: typeof getAppInfoSchema.Encoded
+			) => ReturnType<IStoreService["getAppInfoEffect"]>;
 		}
 	: never;

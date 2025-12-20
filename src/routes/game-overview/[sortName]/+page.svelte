@@ -1,6 +1,6 @@
 <script lang="ts">
 	const { data } = $props();
-	const game = data.game;
+	const game = $derived(data.game);
 </script>
 
 <img src={game.hero} class="w-0 h-0 hidden" aria-hidden="true" alt="" />
