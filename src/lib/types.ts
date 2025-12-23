@@ -5,3 +5,5 @@ export type Game = Merge<
 	Except<Doc<"games">, "gridID" | "iconID" | "heroID">,
 	{ grid: string | null; icon: string | null; hero: string | null }
 >;
+
+export type MaybePromise<T> = Promise<T> | T;
