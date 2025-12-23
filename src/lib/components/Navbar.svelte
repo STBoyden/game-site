@@ -26,7 +26,7 @@
 			.then((results) => {
 				searchResults = [];
 
-				if (results.length === 0) {
+				if (!results || results.length === 0) {
 					resultsPending = false;
 					return;
 				}
@@ -34,6 +34,11 @@
 				for (const result of results) {
 					searchByName({ query: result, limit: RESULTS_LIMIT })
 						.then((games) => {
+							if (!games) {
+								resultsPending = false;
+								return;
+							}
+
 							searchResults = [
 								...searchResults,
 								...games.filter((x) => !searchResults.find((existing) => existing._id === x._id))

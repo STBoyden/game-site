@@ -1,6 +1,8 @@
 {
-	"functions": "src/convex/",
-	"node": {
-		"externalPackages": ["*"]
-	}
+  "functions": "src/convex/",
+  "node": {
+    "externalPackages": [
+      "*"
+    ]
+  }
 }

@@ -1,6 +1,6 @@
-import { Effect, pipe, Schema, Option } from "effect";
+import { effectfulBatchQuery, effectfulQuery } from "$server/utils/remote-functions.effect";
 import { convexClient, steamGridDB } from "$server";
-import { query } from "$app/server";
+import { Effect, Schema, Option } from "effect";
 import { api } from "$convex/api";
 
 const searchByNameSchema = Schema.Struct({
@@ -11,29 +11,23 @@ const searchByNameSchema = Schema.Struct({
 	})
 });
 
-export const getMatchingGameNames = query(
-	Schema.standardSchemaV1(searchByNameSchema),
-	async ({ query, limit }) =>
-		Effect.runPromise(
-			pipe(
-				Effect.promise(() => steamGridDB.searchGame(query.trim())),
-				Effect.tap((results) =>
-					Effect.logInfo(`Query for ${query} yielded ${results.length} results`)
-				),
-				Effect.andThen((results) =>
-					Effect.succeed(results.map((game) => game.name).slice(0, limit))
-				)
-			)
-		)
+export const getMatchingGameNames = effectfulQuery(searchByNameSchema, ({ query, limit }) =>
+	Effect.gen(function* () {
+		const results = yield* Effect.tryPromise(() => steamGridDB.searchGame(query.trim()));
+		yield* Effect.logInfo(`Query for ${query} yielded ${results.length} results`);
+
+		return results.map((game) => game.name).slice(0, limit);
+	}).pipe(Effect.withLogSpan("get matching game names"))
 );
 
-export const searchByName = query(
-	Schema.standardSchemaV1(searchByNameSchema),
-	async ({ query, limit }) =>
-		Effect.runPromise(
-			pipe(
-				Effect.promise(() => convexClient.action(api.games.search, { query, limit })),
-				Effect.andThen((results) => Effect.succeed(results ?? []))
-			)
-		)
+export const searchByName = effectfulQuery(searchByNameSchema, ({ query, limit }) =>
+	Effect.gen(function* () {
+		const results = yield* Effect.tryPromise(() =>
+			convexClient.action(api.games.search, { query, limit })
+		);
+
+		yield* Effect.logInfo(`Convex had ${results?.length ?? 0} result(s)`);
+
+		return results ?? [];
+	}).pipe(Effect.withLogSpan("search by name"))
 );
