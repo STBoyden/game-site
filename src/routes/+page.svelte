@@ -39,8 +39,7 @@
 <div class="p-4">
 	<div
 		bind:this={carouselElement}
-		class="carousel carousel-center w-full bg-base-200 p-2 space-x-2 border-base-300 border-2 rounded-box"
-	>
+		class="carousel carousel-center w-full bg-base-200 p-2 space-x-2 border-base-300 border-2 rounded-box">
 		{#if gamesStore.isLoading}
 			<span class="carousel-item"></span>
 			{#each new Array(10).fill(null) as _, index (index)}
@@ -53,8 +52,7 @@
 				<a
 					class="carousel-item max-w-xs rounded-box bg-base-300 pb-2 cursor-pointer"
 					data-sveltekit-preload-data
-					href={resolve(`/game-overview/${game.sortName}`)}
-				>
+					href={resolve(`/game-overview/${game.sortName}`)}>
 					{@render gameCard(game)}
 				</a>
 			{/each}

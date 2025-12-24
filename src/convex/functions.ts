@@ -14,7 +14,7 @@ type LegacyTables = "games" | "users";
 
 export const query = customQuery(
 	baseQuery,
-	customCtx(async (ctx) => {
+	customCtx(async ctx => {
 		return {
 			table: entsTableFactory(ctx, entDefinitions),
 			db: ctx.db as unknown as GenericDatabaseReader<Pick<DataModel, LegacyTables>>
@@ -24,7 +24,7 @@ export const query = customQuery(
 
 export const internalQuery = customQuery(
 	baseInternalQuery,
-	customCtx(async (ctx) => {
+	customCtx(async ctx => {
 		return {
 			table: entsTableFactory(ctx, entDefinitions),
 			db: ctx.db as unknown as GenericDatabaseReader<Pick<DataModel, LegacyTables>>
@@ -34,7 +34,7 @@ export const internalQuery = customQuery(
 
 export const mutation = customMutation(
 	baseMutation,
-	customCtx(async (ctx) => {
+	customCtx(async ctx => {
 		return {
 			table: entsTableFactory(ctx, entDefinitions),
 			db: ctx.db as GenericDatabaseWriter<Pick<DataModel, LegacyTables>>
@@ -44,7 +44,7 @@ export const mutation = customMutation(
 
 export const internalMutation = customMutation(
 	baseInternalMutation,
-	customCtx(async (ctx) => {
+	customCtx(async ctx => {
 		return {
 			table: entsTableFactory(ctx, entDefinitions),
 			db: ctx.db as GenericDatabaseWriter<Pick<DataModel, LegacyTables>>

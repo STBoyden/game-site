@@ -18,7 +18,7 @@ export class GameStore {
 	});
 
 	readonly gamesMap = $derived.by(() => {
-		return new SvelteMap(this.games.map((game) => [game.sortName, game]));
+		return new SvelteMap(this.games.map(game => [game.sortName, game]));
 	});
 }
 

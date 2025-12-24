@@ -6,8 +6,8 @@ import { api } from "$convex/api";
 const searchByNameSchema = Schema.Struct({
 	query: Schema.NonEmptyString,
 	limit: Schema.optionalToRequired(Schema.Number, Schema.Number, {
-		decode: (maybeLimit) => Option.getOrElse(maybeLimit, () => 10),
-		encode: (limit) => Option.some(limit)
+		decode: maybeLimit => Option.getOrElse(maybeLimit, () => 10),
+		encode: limit => Option.some(limit)
 	})
 });
 
@@ -16,7 +16,7 @@ export const getMatchingGameNames = effectfulQuery(searchByNameSchema, ({ query,
 		const results = yield* Effect.tryPromise(() => steamGridDB.searchGame(query.trim()));
 		yield* Effect.logInfo(`Query for ${query} yielded ${results.length} results`);
 
-		return results.map((game) => game.name).slice(0, limit);
+		return results.map(game => game.name).slice(0, limit);
 	}).pipe(Effect.withLogSpan("get matching game names"))
 );
 

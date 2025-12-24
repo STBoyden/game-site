@@ -14,8 +14,7 @@
 		type="checkbox"
 		bind:checked={() => checked, updateMode}
 		value="dark"
-		class="theme-controller"
-	/>
+		class="theme-controller" />
 	<Sun class="w-[1em] h-[1em]" />
 	<Moon class="w-[1em] h-[1em]" />
 </label>

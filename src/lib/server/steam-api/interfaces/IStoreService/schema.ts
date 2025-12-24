@@ -4,24 +4,24 @@ import { Option, Schema } from "effect";
 export const getAppListSchema = Schema.Struct({
 	key: Schema.String,
 	ifModifiedSince: Schema.optionalToOptional(Schema.DateFromSelf, Schema.Number, {
-		decode: (maybeDate) => Option.map(maybeDate, (x) => x.getTime()),
-		encode: (maybeNumber) => Option.map(maybeNumber, (x) => new Date(x))
+		decode: maybeDate => Option.map(maybeDate, x => x.getTime()),
+		encode: maybeNumber => Option.map(maybeNumber, x => new Date(x))
 	}),
 	includeGames: Schema.optionalToOptional(Schema.Boolean, Schema.Boolean, {
-		decode: (maybeBool) => Option.map(maybeBool, () => true),
-		encode: (maybeBool) => maybeBool
+		decode: maybeBool => Option.map(maybeBool, () => true),
+		encode: maybeBool => maybeBool
 	}),
 	includeDLC: Schema.optionalToOptional(Schema.Boolean, Schema.Boolean, {
-		decode: (maybeBool) => Option.map(maybeBool, () => false),
-		encode: (maybeBool) => maybeBool
+		decode: maybeBool => Option.map(maybeBool, () => false),
+		encode: maybeBool => maybeBool
 	}),
 	includeVideos: Schema.optionalToOptional(Schema.Boolean, Schema.Boolean, {
-		decode: (maybeBool) => Option.map(maybeBool, () => false),
-		encode: (maybeBool) => maybeBool
+		decode: maybeBool => Option.map(maybeBool, () => false),
+		encode: maybeBool => maybeBool
 	}),
 	includeHardware: Schema.optionalToOptional(Schema.Boolean, Schema.Boolean, {
-		decode: (maybeBool) => Option.map(maybeBool, () => false),
-		encode: (maybeBool) => maybeBool
+		decode: maybeBool => Option.map(maybeBool, () => false),
+		encode: maybeBool => maybeBool
 	}),
 	lastAppID: Schema.optional(Schema.Number),
 	maxResults: Schema.optional(Schema.Number.pipe(Schema.clamp(1, 50_000)))
@@ -36,7 +36,7 @@ export const getAppListOutputSchema = Schema.Struct({
 				last_modified: Schema.Number.pipe(
 					Schema.transform(Schema.Date, {
 						strict: true,
-						decode: (epochSeconds) => new Date(epochSeconds * 1000).toISOString(),
+						decode: epochSeconds => new Date(epochSeconds * 1000).toISOString(),
 						encode: (_, date) => date.getTime()
 					})
 				),
@@ -70,8 +70,8 @@ export const getAppInfoOutputSchema = Schema.Union(
 				controllerSupportSchema,
 				controllerSupportSchema,
 				{
-					decode: (maybeOption) => Option.getOrElse(maybeOption, () => "none"),
-					encode: (option) => Option.some(option)
+					decode: maybeOption => Option.getOrElse(maybeOption, () => "none"),
+					encode: option => Option.some(option)
 				}
 			)
 		})

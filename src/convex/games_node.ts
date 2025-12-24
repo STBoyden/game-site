@@ -25,7 +25,7 @@ const downloadImage = (url: string | URL) =>
 
 			return [blob, sha256sum] as const;
 		},
-		catch: (unknown) => new DownloadImageError({ forURL: url, reason: unknown })
+		catch: unknown => new DownloadImageError({ forURL: url, reason: unknown })
 	});
 
 class ConvexStorageUploadError extends Data.TaggedClass("ConvexStorageUploadError")<{
@@ -38,7 +38,7 @@ const uploadToConvex = (ctx: GenericActionCtx<DataModel>, blob: Blob, sha256?: s
 		if (sha256) {
 			const existing = yield* Effect.tryPromise({
 				try: () => ctx.runQuery(internal.games.fileBySha256, { sha256 }),
-				catch: (reason) => new ConvexStorageUploadError({ stage: "checking existing", reason })
+				catch: reason => new ConvexStorageUploadError({ stage: "checking existing", reason })
 			});
 
 			if (existing) {
@@ -48,7 +48,7 @@ const uploadToConvex = (ctx: GenericActionCtx<DataModel>, blob: Blob, sha256?: s
 		}
 		return yield* Effect.tryPromise({
 			try: () => ctx.storage.store(blob),
-			catch: (reason) => new ConvexStorageUploadError({ stage: "uploading", reason })
+			catch: reason => new ConvexStorageUploadError({ stage: "uploading", reason })
 		});
 	});
 
@@ -94,7 +94,7 @@ export const getGameArtwork = internalAction({
 										})
 									)
 								),
-								Effect.andThen((id) => (id ? Effect.succeed(true) : Effect.succeed(false)))
+								Effect.andThen(id => (id ? Effect.succeed(true) : Effect.succeed(false)))
 							)
 					})
 				)
@@ -164,7 +164,7 @@ export const addGame = action({
 		Effect.runPromise(
 			pipe(
 				generateSortName(args.name),
-				Effect.andThen((sortName) =>
+				Effect.andThen(sortName =>
 					Effect.zip(
 						Effect.promise(() => ctx.runQuery(api.games.getBySortName, { sortName })),
 						Effect.succeed(sortName)
@@ -176,7 +176,7 @@ export const addGame = action({
 						onFalse: () => Effect.succeed(sortName)
 					})
 				),
-				Effect.andThen((sortName) =>
+				Effect.andThen(sortName =>
 					Effect.zip(getGameInformation(args.name), Effect.succeed(sortName))
 				),
 				Effect.andThen(([gameInformation, _sortName]) =>
@@ -185,10 +185,10 @@ export const addGame = action({
 						onFalse: () => Effect.succeed(gameInformation!.data)
 					})
 				),
-				Effect.andThen((sgdbGame) =>
+				Effect.andThen(sgdbGame =>
 					pipe(
 						generateSortName(sgdbGame.name),
-						Effect.andThen((sortName) =>
+						Effect.andThen(sortName =>
 							Effect.tryPromise(() =>
 								ctx.runMutation(internal.games.addGame, {
 									name: sgdbGame.name,
@@ -200,7 +200,7 @@ export const addGame = action({
 						)
 					)
 				),
-				Effect.catchAll((error) =>
+				Effect.catchAll(error =>
 					Effect.logWarning(`Could not add game to database: ${error.toString()}`).pipe(
 						Effect.as(null)
 					)
@@ -244,10 +244,10 @@ export const addGames = action({
 	handler: (ctx, args): Promise<Id<"games">[]> =>
 		Effect.runPromise(
 			pipe(
-				Effect.forEach(args.names, (name) =>
+				Effect.forEach(args.names, name =>
 					Effect.promise(() => ctx.runAction(api.games_node.addGame, { name }))
 				),
-				Effect.andThen((games) => Effect.succeed(games.filter((game) => game !== null)))
+				Effect.andThen(games => Effect.succeed(games.filter(game => game !== null)))
 			)
 		)
 });

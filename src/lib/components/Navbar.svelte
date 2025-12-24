@@ -23,7 +23,7 @@
 		resultsPending = true;
 
 		getMatchingGameNames({ query: debouncedSearchQuery.current, limit: RESULTS_LIMIT })
-			.then((results) => {
+			.then(results => {
 				searchResults = [];
 
 				if (!results || results.length === 0) {
@@ -33,7 +33,7 @@
 
 				for (const result of results) {
 					searchByName({ query: result, limit: RESULTS_LIMIT })
-						.then((games) => {
+						.then(games => {
 							if (!games) {
 								resultsPending = false;
 								return;
@@ -41,17 +41,17 @@
 
 							searchResults = [
 								...searchResults,
-								...games.filter((x) => !searchResults.find((existing) => existing._id === x._id))
+								...games.filter(x => !searchResults.find(existing => existing._id === x._id))
 							];
 
 							resultsPending = false;
 
-							console.log(`New games: ${games.map((x) => x.name).join(", ")}`);
+							console.log(`New games: ${games.map(x => x.name).join(", ")}`);
 						})
-						.catch((reason) => `could not get any results for ${result}: ${reason}`);
+						.catch(reason => `could not get any results for ${result}: ${reason}`);
 				}
 			})
-			.catch((reason) => console.log(`could not get matching game names: ${reason}`));
+			.catch(reason => console.log(`could not get matching game names: ${reason}`));
 	});
 
 	onClickOutside(

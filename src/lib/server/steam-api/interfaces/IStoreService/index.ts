@@ -20,7 +20,7 @@ export class IStoreService {
 
 			const result = yield* Effect.tryPromise({
 				try: () => fetch(endpoint),
-				catch: (error) =>
+				catch: error =>
 					new InterfaceFetchError({
 						interface: "IStoreService",
 						function: "getAppListEffect",
@@ -30,7 +30,7 @@ export class IStoreService {
 			});
 			const json = yield* Effect.tryPromise({
 				try: () => result.json(),
-				catch: (error) =>
+				catch: error =>
 					new InterfaceJSONDecodeError({
 						interface: "IStoreService",
 						function: "getAppListEffect",
@@ -40,7 +40,7 @@ export class IStoreService {
 			});
 
 			const jsonDecoded = yield* Schema.decodeUnknown(getAppListOutputSchema)(json);
-			const apps = jsonDecoded.response.apps.map((x) => objectToCamel(x));
+			const apps = jsonDecoded.response.apps.map(x => objectToCamel(x));
 
 			return apps;
 		});
@@ -56,7 +56,7 @@ export class IStoreService {
 
 			const result = yield* Effect.tryPromise({
 				try: () => fetch(endpoint),
-				catch: (error) =>
+				catch: error =>
 					new InterfaceFetchError({
 						interface: "IStoreService",
 						function: "getAppInfoEffect",
@@ -66,7 +66,7 @@ export class IStoreService {
 			});
 			const json = yield* Effect.tryPromise({
 				try: () => result.json(),
-				catch: (error) =>
+				catch: error =>
 					new InterfaceJSONDecodeError({
 						interface: "IStoreService",
 						function: "getAppInfoEffect",

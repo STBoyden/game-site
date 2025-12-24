@@ -9,9 +9,9 @@ import { steamGridDB } from ".";
 
 export const getAll = query({
 	args: {},
-	handler: (ctx) =>
+	handler: ctx =>
 		ctx.table("games").map(
-			async (game) =>
+			async game =>
 				({
 					...game,
 					hero: game.heroID !== undefined ? await ctx.storage.getUrl(game.heroID) : null,
@@ -27,13 +27,13 @@ export const getAllByIDs = query({
 		Effect.runPromise(
 			pipe(
 				Effect.promise(() => ctx.table("games").getMany(args.ids)),
-				Effect.andThen((results) =>
+				Effect.andThen(results =>
 					Effect.promise(() =>
 						Promise.all(
 							results
-								.filter((x) => x !== null)
+								.filter(x => x !== null)
 								.map(
-									async (game) =>
+									async game =>
 										({
 											...game,
 											hero:
@@ -56,7 +56,7 @@ export const get = query({
 		Effect.runPromise(
 			pipe(
 				Effect.promise(() => ctx.table("games").get(id)),
-				Effect.andThen((game) =>
+				Effect.andThen(game =>
 					Effect.if(game !== null, {
 						onTrue: () =>
 							Effect.promise(
@@ -81,9 +81,9 @@ export const getBySortName = query({
 		Effect.runPromise(
 			pipe(
 				Effect.promise(() =>
-					ctx.table("games", "sortName", (q) => q.eq("sortName", sortName)).first()
+					ctx.table("games", "sortName", q => q.eq("sortName", sortName)).first()
 				),
-				Effect.andThen((game) =>
+				Effect.andThen(game =>
 					Effect.if(game !== null, {
 						onTrue: () =>
 							Effect.promise(
@@ -109,7 +109,7 @@ export const searchByName = internalQuery({
 			Effect.promise(() =>
 				ctx
 					.table("games")
-					.search("search_title", (q) => q.search("name", args.query))
+					.search("search_title", q => q.search("name", args.query))
 					.take(args.limit ?? 10)
 			)
 		)
@@ -135,7 +135,7 @@ export const search = action({
 				const fork = Effect.fork(
 					Effect.gen(function* () {
 						const names = yield* Effect.tryPromise(() =>
-							steamGridDB.searchGame(args.query).then((x) => x.map((game) => game.name))
+							steamGridDB.searchGame(args.query).then(x => x.map(game => game.name))
 						);
 
 						const ids = yield* Effect.tryPromise(() =>
@@ -151,7 +151,7 @@ export const search = action({
 				if (results?.length === 0) {
 					return yield* yield* fork;
 				} else {
-					const mapped = yield* Effect.forEach(results, (game) =>
+					const mapped = yield* Effect.forEach(results, game =>
 						Effect.promise(
 							async () =>
 								({
@@ -185,8 +185,8 @@ export const addGameArtwork = internalMutation({
 		Effect.runPromise(
 			pipe(
 				Effect.tryPromise(() => ctx.table("games").getX(gameID)),
-				Effect.andThen((game) => Effect.tryPromise(() => game.patch({ gridID, iconID, heroID }))),
-				Effect.catchAll((error) =>
+				Effect.andThen(game => Effect.tryPromise(() => game.patch({ gridID, iconID, heroID }))),
+				Effect.catchAll(error =>
 					Effect.logError(`Could not update game artwork for ID ${gameID}: ${error}`)
 				)
 			)
@@ -210,7 +210,7 @@ export const addGame = internalMutation({
 						releaseDate
 					})
 				),
-				Effect.tap((id) =>
+				Effect.tap(id =>
 					pipe(
 						Effect.tryPromise(() =>
 							ctx.scheduler.runAfter(0, internal.games_node.getGameArtwork, {
@@ -218,7 +218,7 @@ export const addGame = internalMutation({
 								gameID: id
 							})
 						),
-						Effect.andThen((scheduledTask) =>
+						Effect.andThen(scheduledTask =>
 							Effect.logInfo(
 								`Added scheduled task to fetch artwork for game "${name}" with ID ${scheduledTask}`
 							)
@@ -232,6 +232,6 @@ export const addGame = internalMutation({
 export const fileBySha256 = internalQuery({
 	args: v.object({ sha256: v.string() }),
 	handler: async (ctx, args) => {
-		return (await ctx.db.system.query("_storage").collect()).find((x) => x.sha256 === args.sha256);
+		return (await ctx.db.system.query("_storage").collect()).find(x => x.sha256 === args.sha256);
 	}
 });

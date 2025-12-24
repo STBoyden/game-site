@@ -3,6 +3,8 @@
 	"singleQuote": false,
 	"trailingComma": "none",
 	"printWidth": 100,
+	"arrowParens": "avoid",
+	"svelteBracketNewLine": false,
 	"plugins": [
 		"prettier-plugin-sort-imports",
 		"prettier-plugin-tailwindcss",

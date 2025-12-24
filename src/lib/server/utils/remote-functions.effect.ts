@@ -28,7 +28,7 @@ export const effectfulQuery = <
 	schema: Schema.Schema<ASchema, ISchema, never>,
 	handler: (args: (typeof schema)["Type"]) => Effect.Effect<A, E, never>
 ): RemoteQueryFunction<ISchema, QueryReturn> =>
-	query(Schema.standardSchemaV1(schema), async (args) =>
+	query(Schema.standardSchemaV1(schema), async args =>
 		Effect.runPromise(
 			Effect.gen(function* () {
 				const result = handler(args);
@@ -36,7 +36,7 @@ export const effectfulQuery = <
 				if (yield* Effect.isSuccess(result)) {
 					return yield* result;
 				} else {
-					yield* Effect.tapError(result, (error) =>
+					yield* Effect.tapError(result, error =>
 						Effect.logError(`An error occurred in remote query function: ${error}`)
 					);
 
@@ -69,7 +69,7 @@ export const effectfulBatchQuery = <
 		args: (typeof schema)["Type"][]
 	) => Effect.Effect<(arg: (typeof schema)["Type"], idx: number) => Effect.Effect<A, E, never>>
 ): RemoteQueryFunction<ISchema, BatchQueryReturn> =>
-	query.batch(Schema.standardSchemaV1(schema), async (args) => {
+	query.batch(Schema.standardSchemaV1(schema), async args => {
 		const lookup = handler(args);
 
 		return (arg, index) =>
@@ -81,7 +81,7 @@ export const effectfulBatchQuery = <
 					if (yield* Effect.isSuccess(result)) {
 						return yield* result;
 					} else {
-						yield* Effect.tapError(result, (error) =>
+						yield* Effect.tapError(result, error =>
 							Effect.logError(
 								`An error occurred in remote query batch function [index: ${index}, arg: ${arg}]: ${error}`
 							)
@@ -115,7 +115,7 @@ export const effectfulForm = <
 	schema: Schema.Schema<ASchema, ISchema, never>,
 	handler: (args: (typeof schema)["Type"]) => Effect.Effect<A, E, never>
 ): RemoteForm<ISchema, FormReturn> =>
-	form(Schema.standardSchemaV1(schema), async (args) =>
+	form(Schema.standardSchemaV1(schema), async args =>
 		Effect.runPromise(
 			Effect.gen(function* () {
 				const result = handler(args);
@@ -123,7 +123,7 @@ export const effectfulForm = <
 				if (yield* Effect.isSuccess(result)) {
 					return yield* result;
 				} else {
-					yield* Effect.tapError(result, (error) =>
+					yield* Effect.tapError(result, error =>
 						Effect.logError(`An error occurred in remote form function: ${error}`)
 					);
 
@@ -155,7 +155,7 @@ export const effectfulCommand = <
 	schema: Schema.Schema<ASchema, ISchema, never>,
 	handler: (args: (typeof schema)["Type"]) => Effect.Effect<A, E, never>
 ): RemoteCommand<ISchema, CommandReturn> =>
-	command(Schema.standardSchemaV1(schema), async (args) =>
+	command(Schema.standardSchemaV1(schema), async args =>
 		Effect.runPromise(
 			Effect.gen(function* () {
 				const result = handler(args);
@@ -163,7 +163,7 @@ export const effectfulCommand = <
 				if (yield* Effect.isSuccess(result)) {
 					return yield* result;
 				} else {
-					yield* Effect.tapError(result, (error) =>
+					yield* Effect.tapError(result, error =>
 						Effect.logError(`An error occurred in remote command function: ${error}`)
 					);
 
